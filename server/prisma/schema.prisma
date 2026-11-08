@@ -1,0 +1,94 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model TopicPrompt {
+  id              String         @id @default(uuid())
+  taskType        String         // "TASK_1" | "TASK_2"
+  title           String
+  questionText    String
+  imageUrl        String?        // Đường dẫn file ảnh upload cho Task 1
+  chartDataJson   String?        // Dữ liệu trích xuất từ Vision AI cho Task 1 (JSON string)
+  category        String         @default("General") // "Education", "Environment", "Technology", etc.
+  createdAt       DateTime       @default(now())
+  
+  essays          Essay[]
+}
+
+model Essay {
+  id              String         @id @default(uuid())
+  promptId        String
+  prompt          TopicPrompt    @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  aimBand         Float          @default(6.5)
+  title           String?
+  content         String         @default("") // Nội dung bài viết
+  wordCount       Int            @default(0)
+  timeSpentSeconds Int           @default(0) // Thời gian làm bài tính theo giây
+  status          String         @default("DRAFT") // "DRAFT" | "SUBMITTED" | "REVIEWED"
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  
+  evaluation      Evaluation?
+  chatMessages    TutorMessage[]
+  errorRecords    ErrorRecord[]
+  notebookItems   NotebookItem[]
+}
+
+model Evaluation {
+  id                  String     @id @default(uuid())
+  essayId             String     @unique
+  essay               Essay      @relation(fields: [essayId], references: [id], onDelete: Cascade)
+  overallBand         Float
+  taTrScore           Float      // Task Achievement / Task Response
+  ccScore             Float      // Coherence & Cohesion
+  lrScore             Float      // Lexical Resource
+  graScore            Float      // Grammatical Range & Accuracy
+  
+  ideaAnalysisJson    String     // Phân tích ý hợp lệ, ý thiếu, ý lạc đề, cách triển khai (JSON)
+  detailedErrorsJson  String     // Danh sách lỗi ngữ pháp, collocation, diễn đạt chưa tự nhiên (JSON)
+  upgradedEssay       String     // Đúng 1 bản nâng cấp chuẩn theo aim band
+  createdAt           DateTime   @default(now())
+}
+
+model TutorMessage {
+  id              String         @id @default(uuid())
+  essayId         String
+  essay           Essay          @relation(fields: [essayId], references: [id], onDelete: Cascade)
+  role            String         // "user" | "assistant"
+  inputMethod     String         @default("TEXT") // "TEXT" | "VOICE"
+  mode            String?        // "HINT" | "INLINE_CHECK" | "UPGRADE" | "COLLOCATION"
+  selectedText    String?        // Đoạn văn bản bôi đen được hỏi (nếu có)
+  content         String
+  createdAt       DateTime       @default(now())
+}
+
+model NotebookItem {
+  id              String         @id @default(uuid())
+  essayId         String?
+  essay           Essay?         @relation(fields: [essayId], references: [id], onDelete: SetNull)
+  type            String         @default("COLLOCATION") // "COLLOCATION" | "VOCABULARY" | "SENTENCE_STRUCTURE" | "REFINED_PHRASE"
+  originalText    String
+  meaningVi       String?
+  contextExample  String?
+  tags            String?        // Phân cách bằng dấu phẩy
+  reviewCount     Int            @default(0) // Số lần đã ôn tập flashcard
+  masteryLevel    String         @default("NEW") // "NEW" | "LEARNING" | "MASTERED"
+  lastReviewedAt  DateTime?
+  createdAt       DateTime       @default(now())
+}
+
+model ErrorRecord {
+  id              String         @id @default(uuid())
+  essayId         String
+  essay           Essay          @relation(fields: [essayId], references: [id], onDelete: Cascade)
+  errorType       String         // SVA, COLLOCATION, TENSE, ARTICLE, PREPOSITION, etc.
+  originalSnippet String
+  correctedSnippet String
+  explanationVi   String
+  createdAt       DateTime       @default(now())
+}
