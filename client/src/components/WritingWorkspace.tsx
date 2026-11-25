@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Volume2,
   LogOut,
+  Trash2,
 } from 'lucide-react';
 import { SaveNotebookModal } from './SaveNotebookModal';
 import { TipTapEditor } from './TipTapEditor';
@@ -145,6 +146,58 @@ export const WritingWorkspace: React.FC<WritingWorkspaceProps> = ({
       alert('Lỗi kết nối khi cập nhật số liệu.');
     } finally {
       setIsSavingChart(false);
+    }
+  };
+
+  // Re-scan Task 1 chart image using Vision AI (llava)
+  const [isRescanningChart, setIsRescanningChart] = useState(false);
+  const handleRescanChart = async () => {
+    if (isRescanningChart) return;
+    setIsRescanningChart(true);
+    try {
+      const res = await fetch(`/api/prompts/${essay.prompt.id}/rescan`, {
+        method: 'POST',
+      });
+      if (res.ok) {
+        const updatedPrompt = await res.json();
+        onUpdateEssay({
+          ...essay,
+          prompt: updatedPrompt,
+        });
+        alert('✅ Đã quét lại biểu đồ thành công bằng Vision Model (llava)!');
+      } else {
+        const err = await res.json().catch(() => null);
+        alert(`Không thể quét lại: ${err?.message || 'Lỗi xử lý hình ảnh'}`);
+      }
+    } catch (err) {
+      console.error('Rescan chart failed:', err);
+      alert('Lỗi kết nối khi quét lại hình ảnh.');
+    } finally {
+      setIsRescanningChart(false);
+    }
+  };
+
+  // Delete current prompt from within Writing Workspace
+  const handleDeleteCurrentPrompt = async () => {
+    const confirmed = window.confirm(
+      `Bạn có chắc chắn muốn xóa vĩnh viễn đề thi "${essay.prompt.title}"?\n\nLưu ý: Mọi bài viết và lịch sử làm bài thuộc đề này cũng sẽ bị xóa.`
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/prompts/${essay.prompt.id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        alert('Đã xóa đề thi thành công.');
+        onCloseEssay?.();
+      } else {
+        const err = await res.json().catch(() => null);
+        alert(`Không thể xóa đề: ${err?.message || 'Lỗi server'}`);
+      }
+    } catch (err) {
+      console.error('Delete prompt failed:', err);
+      alert('Lỗi kết nối khi xóa đề thi.');
     }
   };
 
@@ -563,6 +616,17 @@ export const WritingWorkspace: React.FC<WritingWorkspaceProps> = ({
                   )}
                 </div>
 
+                {/* Delete Prompt Button */}
+                <button
+                  type="button"
+                  onClick={handleDeleteCurrentPrompt}
+                  className="px-2.5 py-1 rounded-xl border-2 border-retro-border bg-white hover:bg-rose-50 hover:text-rose-700 hover:border-rose-400 font-extrabold text-xs flex items-center gap-1 shadow-neo-sm active:translate-y-0.5 transition-all text-slate-500"
+                  title="Xóa vĩnh viễn đề thi này"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                  <span className="hidden sm:inline">Xóa đề</span>
+                </button>
+
                 {/* Exit Draft Button */}
                 <button
                   type="button"
@@ -620,29 +684,66 @@ export const WritingWorkspace: React.FC<WritingWorkspaceProps> = ({
                           {parsedChartData?.chart_type || 'Biểu đồ Task 1'}
                         </span>
                         {!isEditingChart && (
-                          <button
-                            type="button"
-                            onClick={handleStartEditChart}
-                            className="text-[11px] font-black px-2.5 py-1 rounded-xl bg-white hover:bg-amber-100 text-slate-900 border border-slate-900 shadow-neo-sm active:translate-y-0.5 transition-all flex items-center gap-1"
-                          >
-                            ✏️ Nhập / Chỉnh Sửa Số Liệu
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={handleRescanChart}
+                              disabled={isRescanningChart}
+                              className="text-[11px] font-black px-2.5 py-1 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 border border-slate-950 shadow-neo-sm active:translate-y-0.5 transition-all flex items-center gap-1 disabled:opacity-50"
+                              title="Yêu cầu Vision AI quét lại toàn bộ dữ liệu biểu đồ"
+                            >
+                              {isRescanningChart ? (
+                                <>
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                  <span>Đang quét...</span>
+                                </>
+                              ) : (
+                                <>
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                  <span>AI Quét Lại Ảnh</span>
+                                </>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleStartEditChart}
+                              className="text-[11px] font-black px-2.5 py-1 rounded-xl bg-white hover:bg-amber-100 text-slate-900 border border-slate-900 shadow-neo-sm active:translate-y-0.5 transition-all flex items-center gap-1"
+                            >
+                              ✏️ Sửa Số Liệu
+                            </button>
+                          </div>
                         )}
                       </div>
                     </div>
 
-                    {/* Notice if vision model is missing or template was used */}
+                    {/* Notice if vision model was missing when prompt was created or template was used */}
                     {(parsedChartData?.missingVisionModel || parsedChartData?.key_trends?.[0]?.includes('chưa') || parsedChartData?.significant_data_points?.[0]?.includes('Highest point')) && !isEditingChart && (
-                      <div className="p-3 bg-amber-100/90 rounded-xl border border-amber-300 text-amber-950 text-xs space-y-1 shadow-xs">
+                      <div className="p-3.5 bg-amber-100/90 rounded-xl border border-amber-300 text-amber-950 text-xs space-y-2.5 shadow-xs">
                         <div className="flex items-center gap-1.5 font-black text-amber-900">
                           <span>💡</span>
-                          <span>Chưa có Vision Model để AI tự động quét ảnh</span>
+                          <span>Đề thi này trước đó chưa có Vision Model quét số liệu</span>
                         </div>
                         <p className="text-[11px] leading-relaxed">
-                          Trong Ollama trên máy bạn hiện chưa có mô hình đọc ảnh (Vision Model như <code>llava</code> hoặc <code>qwen2.5-vl</code>). 
-                          Bạn có thể mở Terminal gõ lệnh <code className="bg-white px-1.5 py-0.5 rounded font-mono font-bold text-slate-900">ollama run llava</code> để tải, 
-                          <strong> hoặc bấm ngay nút "✏️ Nhập / Chỉnh Sửa Số Liệu" ở trên</strong> để điền các con số từ ảnh vào đây cho AI làm căn cứ chấm bài!
+                          Hiện tại mô hình thị giác <strong>llava</strong> đã được cài đặt và tích hợp vào hệ thống. Bạn hãy bấm nút bên dưới để AI tự động phân tích biểu đồ và bóc tách toàn bộ số liệu chuẩn xác ngay bây giờ!
                         </p>
+                        <button
+                          type="button"
+                          onClick={handleRescanChart}
+                          disabled={isRescanningChart}
+                          className="px-3.5 py-2 rounded-xl bg-slate-950 hover:bg-slate-800 text-amber-300 border-2 border-slate-950 font-black text-xs flex items-center gap-2 shadow-neo-sm active:translate-y-0.5 transition-all disabled:opacity-50"
+                        >
+                          {isRescanningChart ? (
+                            <>
+                              <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                              <span>AI đang quét lại ảnh biểu đồ (khoảng 30-60 giây)...</span>
+                            </>
+                          ) : (
+                            <>
+                              <RotateCcw className="w-4 h-4" />
+                              <span>⚡ Bấm Vào Đây Để AI Quét Lại Ảnh Ngay</span>
+                            </>
+                          )}
+                        </button>
                       </div>
                     )}
 

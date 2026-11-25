@@ -1,6 +1,13 @@
-import { Injectable, OnModuleInit, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { OllamaService } from '../ollama/ollama.service';
+import * as fs from 'fs';
+import { join } from 'path';
 
 @Injectable()
 export class PromptsService implements OnModuleInit {
@@ -120,7 +127,17 @@ export class PromptsService implements OnModuleInit {
   }
 
   async delete(id: string) {
-    await this.getById(id);
+    const prompt = await this.getById(id);
+    if (prompt.imageUrl && prompt.imageUrl.startsWith('/uploads/')) {
+      const filePath = join(process.cwd(), 'uploads', prompt.imageUrl.replace('/uploads/', ''));
+      if (fs.existsSync(filePath)) {
+        try {
+          fs.unlinkSync(filePath);
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
     return this.prisma.topicPrompt.delete({
       where: { id },
     });
@@ -130,6 +147,51 @@ export class PromptsService implements OnModuleInit {
     return this.prisma.topicPrompt.update({
       where: { id },
       data: { chartDataJson },
+    });
+  }
+
+  async rescanChart(id: string, newFile?: Express.Multer.File) {
+    const prompt = await this.getById(id);
+
+    let imageUrl = prompt.imageUrl;
+    let base64 = '';
+
+    if (newFile) {
+      imageUrl = `/uploads/${newFile.filename}`;
+      const fileBuffer = fs.readFileSync(newFile.path);
+      base64 = fileBuffer.toString('base64');
+    } else {
+      if (!prompt.imageUrl) {
+        throw new BadRequestException('Đề thi này không có hình ảnh biểu đồ để quét.');
+      }
+      const uploadsDir = join(process.cwd(), 'uploads');
+      const relativeName = prompt.imageUrl.replace(/^\/uploads\//, '');
+      const localUploadPath = join(uploadsDir, relativeName);
+
+      if (prompt.imageUrl.startsWith('data:image')) {
+        base64 = prompt.imageUrl.split(',')[1] || '';
+      } else if (fs.existsSync(localUploadPath)) {
+        base64 = fs.readFileSync(localUploadPath).toString('base64');
+      } else if (fs.existsSync(prompt.imageUrl)) {
+        base64 = fs.readFileSync(prompt.imageUrl).toString('base64');
+      } else {
+        throw new NotFoundException(
+          `Không tìm thấy file hình ảnh gốc của đề thi tại: ${prompt.imageUrl}`,
+        );
+      }
+    }
+
+    const chartDataJson = await this.ollama.analyzeTask1Image(
+      base64,
+      prompt.questionText,
+    );
+
+    return this.prisma.topicPrompt.update({
+      where: { id },
+      data: {
+        imageUrl,
+        chartDataJson,
+      },
     });
   }
 }

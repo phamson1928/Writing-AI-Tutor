@@ -102,6 +102,25 @@ export class PromptsController {
     return this.promptsService.updateChartData(id, body.chartDataJson);
   }
 
+  @Post(':id/rescan')
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: diskStorage({
+        destination: uploadsDir,
+        filename: (req, file, cb) => {
+          const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+          cb(null, `${uniqueSuffix}${extname(file.originalname)}`);
+        },
+      }),
+    }),
+  )
+  async rescan(
+    @Param('id') id: string,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.promptsService.rescanChart(id, file);
+  }
+
   @Delete(':id')
   async delete(@Param('id') id: string) {
     return this.promptsService.delete(id);

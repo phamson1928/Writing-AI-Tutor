@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { TopicPrompt } from '../types';
-import { Plus, Image as ImageIcon, ArrowRight, BookOpen, Sparkles, Loader2, Play, CheckCircle2, SlidersHorizontal, BookCheck, Zap } from 'lucide-react';
+import { Plus, Image as ImageIcon, ArrowRight, BookOpen, Sparkles, Loader2, Play, CheckCircle2, SlidersHorizontal, BookCheck, Zap, Trash2 } from 'lucide-react';
 
 interface PromptBankProps {
   prompts: TopicPrompt[];
@@ -79,6 +79,31 @@ export const PromptBank: React.FC<PromptBankProps> = ({
       alert('Lỗi kết nối khi gửi dữ liệu đề thi.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeletePrompt = async (e: React.MouseEvent, promptId: string, promptTitle: string) => {
+    e.stopPropagation();
+    const confirmed = window.confirm(
+      `Bạn có chắc chắn muốn xóa đề thi:\n"${promptTitle}"?\n\nLưu ý: Mọi bài viết và dữ liệu chấm điểm của đề thi này cũng sẽ bị xóa vĩnh viễn.`
+    );
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch(`/api/prompts/${promptId}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setSuccessMessage(`Đã xóa thành công đề thi: "${promptTitle}"!`);
+        setTimeout(() => setSuccessMessage(null), 6000);
+        onRefresh();
+      } else {
+        const err = await res.json().catch(() => null);
+        alert(`Không thể xóa đề thi: ${err?.message || 'Lỗi server'}`);
+      }
+    } catch (err) {
+      console.error('Delete prompt failed:', err);
+      alert('Lỗi kết nối khi xóa đề thi.');
     }
   };
 
@@ -307,6 +332,14 @@ export const PromptBank: React.FC<PromptBankProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeletePrompt(e, prompt.id, prompt.title)}
+                        className="w-7 h-7 rounded-full border border-slate-200 bg-white text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-colors flex items-center justify-center shrink-0 z-10"
+                        title="Xóa đề thi này"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                       <span className="text-xs text-slate-400 font-medium hidden sm:inline">Chưa làm</span>
                       <div className="w-7 h-7 rounded-full border-2 border-retro-border bg-white flex items-center justify-center group-hover:bg-[#285737] group-hover:text-white transition-colors">
                         <ArrowRight className="w-3.5 h-3.5" />
@@ -417,6 +450,14 @@ export const PromptBank: React.FC<PromptBankProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeletePrompt(e, prompt.id, prompt.title)}
+                        className="w-7 h-7 rounded-full border border-slate-200 bg-white text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-colors flex items-center justify-center shrink-0 z-10"
+                        title="Xóa đề thi này"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                       <span className="text-xs text-slate-400 font-medium hidden sm:inline">Chưa làm</span>
                       <div className="w-7 h-7 rounded-full border-2 border-retro-border bg-white flex items-center justify-center group-hover:bg-[#285737] group-hover:text-white transition-colors">
                         <ArrowRight className="w-3.5 h-3.5" />
@@ -480,12 +521,22 @@ export const PromptBank: React.FC<PromptBankProps> = ({
               >
                 <div>
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="bg-[#285737] text-white text-[10px] font-pixel font-bold px-2 py-0.5 rounded-lg border border-retro-border">
-                      {prompt.taskType}
-                    </span>
-                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${getCategoryColor(prompt.category)}`}>
-                      {prompt.category}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="bg-[#285737] text-white text-[10px] font-pixel font-bold px-2 py-0.5 rounded-lg border border-retro-border">
+                        {prompt.taskType}
+                      </span>
+                      <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full border ${getCategoryColor(prompt.category)}`}>
+                        {prompt.category}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeletePrompt(e, prompt.id, prompt.title)}
+                      className="w-6 h-6 rounded-md border border-slate-200 bg-white text-slate-400 hover:text-rose-600 hover:bg-rose-50 hover:border-rose-300 transition-colors flex items-center justify-center shrink-0"
+                      title="Xóa đề thi này"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
                   </div>
                   <h4 className="font-extrabold text-sm text-zinc-900 line-clamp-2 mb-1">
                     {prompt.title}
