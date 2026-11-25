@@ -385,12 +385,80 @@ export const WritingWorkspace: React.FC<WritingWorkspaceProps> = ({
 
     const actionTitle =
       actionType === 'FIX_GRAMMAR'
-        ? `Kiểm tra ngữ pháp câu: "${targetText}"`
+        ? `🔍 Kiểm tra & Sửa lỗi câu: "${targetText}"`
         : actionType === 'UPGRADE_SENTENCE'
-        ? `Nâng cấp câu theo Aim Band ${aimBand}: "${targetText}"`
-        : `Gợi ý Collocation cho đoạn: "${targetText}"`;
+        ? `✨ Nâng cấp câu theo Aim Band ${aimBand.toFixed(1)}: "${targetText}"`
+        : `💡 Gợi ý Collocations học thuật: "${targetText}"`;
 
-    handleSendMessage(actionTitle, targetText);
+    const userMsg: TutorMessage = {
+      id: Date.now().toString(),
+      role: 'user',
+      inputMethod: 'TEXT',
+      selectedText: targetText,
+      content: actionTitle,
+      createdAt: new Date().toISOString(),
+    };
+
+    setMessages((prev) => [...prev, userMsg]);
+    setIsStreaming(true);
+    setStreamingText('');
+
+    try {
+      const response = await fetch('/api/tutor/inline-action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          essayId: essay.id,
+          actionType,
+          selectedText: targetText,
+        }),
+      });
+
+      if (!response.body) return;
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let fullAssistantText = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.replace('data: ', ''));
+              if (data.text) {
+                fullAssistantText += data.text;
+                setStreamingText(fullAssistantText);
+              }
+              if (data.done) {
+                setMessages((prev) => [
+                  ...prev,
+                  {
+                    id: (Date.now() + 1).toString(),
+                    role: 'assistant',
+                    inputMethod: 'TEXT',
+                    content: data.fullText || fullAssistantText,
+                    createdAt: new Date().toISOString(),
+                  },
+                ]);
+                setStreamingText('');
+              }
+            } catch (e) {
+              // ignore
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Inline action error:', err);
+    } finally {
+      setIsStreaming(false);
+    }
   };
 
   // Handle Submit & Evaluate

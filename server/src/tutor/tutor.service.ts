@@ -167,26 +167,34 @@ NGUYÊN TẮC SƯ PHẠM:
     let prompt = '';
 
     if (actionType === 'FIX_GRAMMAR') {
-      prompt = `Hãy kiểm tra và phân tích câu/đoạn sau đây tôi vừa viết:
+      prompt = `Bạn là Gia sư IELTS chuyên sâu về Ngữ pháp & Độ chính xác (GRA). Hãy kiểm tra câu/đoạn sau:
 "${selectedText}"
 
 YÊU CẦU:
-1. Chỉ ra câu này đúng hay có lỗi ngữ pháp/chính tả nào không?
-2. Giải thích cụ thể nguyên nhân sai bằng tiếng Việt.
-3. Đưa ra gợi ý sửa tự nhiên nhưng giữ nguyên ý tưởng ban đầu của tôi.`;
+1. Kiểm tra tính đúng/sai về mặt ngữ pháp (SVA, thì động từ, mạo từ a/an/the, giới từ, trật tự từ, chính tả).
+   - Nếu câu ĐÃ ĐÚNG: Xác nhận câu hoàn toàn chuẩn xác, nêu ngắn gọn điểm tốt.
+   - Nếu câu CÓ LỖI: Chỉ rõ từ/cụm từ sai và giải thích nguyên tắc ngữ pháp bằng tiếng Việt.
+2. Đưa ra phiên bản sửa lỗi tối thiểu: GIỮ NGUYÊN cấu trúc và từ vựng cốt lõi của học viên, chỉ khắc phục chỗ sai để câu hoàn toàn chính xác.`;
     } else if (actionType === 'UPGRADE_SENTENCE') {
-      prompt = `Hãy giúp tôi nâng cấp câu sau lên mức Aim Band ${essay.aimBand}:
+      prompt = `Bạn là Chuyên gia IELTS Writing luyện thi Aim Band ${essay.aimBand}. Hãy nâng cấp câu sau lên đẳng cấp học thuật Band ${essay.aimBand}:
 "${selectedText}"
 
 YÊU CẦU:
-1. Đưa ra 1-2 cách viết lại học thuật, tự nhiên và chuẩn phong cách IELTS.
-2. Giải thích ngắn gọn bằng tiếng Việt tại sao cách viết mới lại ấn tượng hơn (từ vựng C1/C2, cấu trúc câu phức, tính liên kết).`;
+1. Đưa ra 2 cách viết nâng cấp ấn tượng:
+   - Cách 1 (Natural & Fluent): Diễn đạt tự nhiên, mạch lạc, từ vựng C1 chuẩn xác.
+   - Cách 2 (Academic & Sophisticated): Sử dụng cấu trúc câu phức/danh từ hóa (nominalization) hoặc mệnh đề quan hệ để tối ưu điểm GRA & LR.
+2. Giải thích ngắn gọn bằng tiếng Việt điểm sáng của bản nâng cấp (từ vựng đắt giá, cấu trúc câu giúp giám khảo đánh giá cao).`;
     } else if (actionType === 'COLLOCATION') {
-      prompt = `Từ đoạn văn bản này:
+      prompt = `Bạn là Chuyên gia Từ vựng IELTS (Lexical Resource). Từ câu/đoạn văn bản này:
 "${selectedText}"
 
 YÊU CẦU:
-Gợi ý 3-4 Collocations học thuật tự nhiên (kèm nghĩa tiếng Việt và 1 câu ví dụ minh họa) có thể dùng để thay thế hoặc mở rộng cho các từ trong đoạn này.`;
+1. Trích xuất hoặc gợi ý 3-4 Collocations (cụm từ cố định tự nhiên) học thuật cấp độ C1/C2 phù hợp nhất để thay thế hoặc mở rộng ý cho câu này.
+2. Với mỗi Collocation, trình bày rõ ràng:
+   - **Cụm Collocation**
+   - *Nghĩa tiếng Việt:*
+   - *Ví dụ thực tế trong IELTS Writing:*
+3. Nhắc học viên có thể bôi đen cụm collocation tâm đắc và bấm "Lưu Sổ Tay" để ôn luyện Flashcard sau này.`;
     }
 
     const fullResponse = await this.ollama.streamToClient(res, prompt, systemPrompt);
