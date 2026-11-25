@@ -117,7 +117,7 @@ NGUYÊN TẮC SƯ PHẠM:
 
   async handleInlineAction(
     essayId: string,
-    actionType: 'FIX_GRAMMAR' | 'UPGRADE_SENTENCE' | 'COLLOCATION' | 'ALL_IN_ONE',
+    actionType: 'FIX_ERRORS' | 'UPGRADE_SENTENCE' | string,
     selectedText: string,
     res: Response,
   ) {
@@ -131,22 +131,17 @@ NGUYÊN TẮC SƯ PHẠM:
       return;
     }
 
-    // Save user request into chat history so the thread is complete
-    const actionLabel =
-      actionType === 'ALL_IN_ONE'
-        ? `⚡ Đánh giá toàn diện 3-in-1: "${selectedText}"`
-        : actionType === 'FIX_GRAMMAR'
-        ? `Kiểm tra ngữ pháp câu: "${selectedText}"`
-        : actionType === 'UPGRADE_SENTENCE'
-        ? `Nâng cấp câu theo Aim Band ${essay.aimBand}: "${selectedText}"`
-        : `Gợi ý Collocation cho đoạn: "${selectedText}"`;
+    const isUpgrade = actionType === 'UPGRADE_SENTENCE';
+    const actionLabel = isUpgrade
+      ? `✨ Nâng cấp câu & Collocations chuẩn Aim Band ${essay.aimBand}: "${selectedText}"`
+      : `🔍 Sửa lỗi toàn diện (Ngữ pháp, chính tả & Collocations): "${selectedText}"`;
 
     await this.prisma.tutorMessage.create({
       data: {
         essayId,
         role: 'user',
         inputMethod: 'TEXT',
-        mode: actionType,
+        mode: isUpgrade ? 'UPGRADE_SENTENCE' : 'FIX_ERRORS',
         selectedText,
         content: actionLabel,
       },
@@ -168,51 +163,33 @@ NGUYÊN TẮC SƯ PHẠM:
     const systemPrompt = this.buildSystemPrompt(essay, topErrors);
     let prompt = '';
 
-    if (actionType === 'ALL_IN_ONE') {
-      prompt = `Bạn là Gia sư IELTS chuyên sâu toàn diện. Tôi đang băn khoăn về cả ngữ pháp, độ hay và collocations của câu/đoạn sau:
-"${selectedText}"
-Mục tiêu Aim Band: ${essay.aimBand}
-
-YÊU CẦU TRẢ LỜI ĐẦY ĐỦ 3 PHẦN THIẾT THỰC (Định dạng rõ ràng, ngắn gọn, súc tích):
-1. 🔍 ĐỘ CHUẨN XÁC & SỬA LỖI (Grammar & Accuracy):
-   - Nếu có lỗi ngữ pháp/từ loại: Chỉ rõ lỗi sai và đưa ra phiên bản sửa lỗi tối thiểu (giữ nguyên cấu trúc của tôi).
-   - Nếu câu đã hoàn toàn đúng ngữ pháp: Xác nhận câu đã chuẩn xác.
-
-2. ✨ NÂNG CẤP CÂU CHUẨN AIM BAND ${essay.aimBand}:
-   - Đưa ra 1 phiên bản viết lại (Rewrite) xuất sắc nhất: tự nhiên, học thuật và chuẩn phong cách IELTS Band ${essay.aimBand}.
-   - Chỉ rõ điểm sáng giúp nâng band điểm (từ vựng C1/C2, cấu trúc câu phức, tính liên kết).
-
-3. 💡 COLLOCATIONS ĐẮT GIÁ:
-   - Gợi ý 2-3 cụm Collocations C1/C2 liên quan nhất (kèm nghĩa tiếng Việt) để tôi có thể học và bôi đen bấm "Lưu Sổ Tay".`;
-    } else if (actionType === 'FIX_GRAMMAR') {
-      prompt = `Bạn là Gia sư IELTS chuyên sâu về Ngữ pháp & Độ chính xác (GRA). Hãy kiểm tra câu/đoạn sau:
+    if (isUpgrade) {
+      prompt = `Bạn là Chuyên gia IELTS Writing luyện thi chuyên sâu theo Aim Band ${essay.aimBand}.
+Hãy nâng cấp toàn diện câu/đoạn sau lên đúng chuẩn đẳng cấp Aim Band ${essay.aimBand} (kết hợp cả cấu trúc câu học thuật và collocations bản xứ):
 "${selectedText}"
 
-YÊU CẦU:
-1. Kiểm tra tính đúng/sai về mặt ngữ pháp (SVA, thì động từ, mạo từ a/an/the, giới từ, trật tự từ, chính tả).
-   - Nếu câu ĐÃ ĐÚNG: Xác nhận câu hoàn toàn chuẩn xác, nêu ngắn gọn điểm tốt.
-   - Nếu câu CÓ LỖI: Chỉ rõ từ/cụm từ sai và giải thích nguyên tắc ngữ pháp bằng tiếng Việt.
-2. Đưa ra phiên bản sửa lỗi tối thiểu: GIỮ NGUYÊN cấu trúc và từ vựng cốt lõi của học viên, chỉ khắc phục chỗ sai để câu hoàn toàn chính xác.`;
-    } else if (actionType === 'UPGRADE_SENTENCE') {
-      prompt = `Bạn là Chuyên gia IELTS Writing luyện thi Aim Band ${essay.aimBand}. Hãy nâng cấp câu sau lên đẳng cấp học thuật Band ${essay.aimBand}:
+YÊU CẦU TRẢ LỜI ĐẦY ĐỦ VÀ RÕ RÀNG:
+1. 🌟 HAI PHIÊN BẢN NÂNG CẤP XUẤT SẮC:
+   - Cách 1 (Mạch lạc & Tự nhiên - Fluent & Natural): Diễn đạt tự nhiên, trôi chảy như người bản xứ, lồng ghép các collocations C1 chuẩn xác.
+   - Cách 2 (Học thuật & Đột phá - Academic & Sophisticated): Nâng cao cấu trúc câu (danh từ hóa / nominalization, câu phức, mệnh đề quan hệ hoặc đảo ngữ) kết hợp các collocations C1/C2 đắt giá nhất.
+2. 💡 COLLOCATIONS ĐẮT GIÁ ĐƯỢC DÙNG:
+   - Trích xuất 2-3 cụm Collocations ấn tượng nhất trong các bản nâng cấp trên (kèm nghĩa tiếng Việt) để học viên có thể bôi đen và bấm "Lưu Sổ Tay".
+3. 🎯 PHÂN TÍCH ĐIỂM SÁNG:
+   - Giải thích ngắn gọn 1-2 lý do vì sao cách viết nâng cấp này giúp ăn điểm cao ở tiêu chí GRA và LR.`;
+    } else {
+      prompt = `Bạn là Gia sư IELTS chuyên sâu về Độ chuẩn xác (Accuracy: Ngữ pháp, Chính tả & Collocations).
+Hãy kiểm tra và sửa lỗi toàn diện cho câu/đoạn sau:
 "${selectedText}"
 
-YÊU CẦU:
-1. Đưa ra 2 cách viết nâng cấp ấn tượng:
-   - Cách 1 (Natural & Fluent): Diễn đạt tự nhiên, mạch lạc, từ vựng C1 chuẩn xác.
-   - Cách 2 (Academic & Sophisticated): Sử dụng cấu trúc câu phức/danh từ hóa (nominalization) hoặc mệnh đề quan hệ để tối ưu điểm GRA & LR.
-2. Giải thích ngắn gọn bằng tiếng Việt điểm sáng của bản nâng cấp (từ vựng đắt giá, cấu trúc câu giúp giám khảo đánh giá cao).`;
-    } else if (actionType === 'COLLOCATION') {
-      prompt = `Bạn là Chuyên gia Từ vựng IELTS (Lexical Resource). Từ câu/đoạn văn bản này:
-"${selectedText}"
-
-YÊU CẦU:
-1. Trích xuất hoặc gợi ý 3-4 Collocations (cụm từ cố định tự nhiên) học thuật cấp độ C1/C2 phù hợp nhất để thay thế hoặc mở rộng ý cho câu này.
-2. Với mỗi Collocation, trình bày rõ ràng:
-   - **Cụm Collocation**
-   - *Nghĩa tiếng Việt:*
-   - *Ví dụ thực tế trong IELTS Writing:*
-3. Nhắc học viên có thể bôi đen cụm collocation tâm đắc và bấm "Lưu Sổ Tay" để ôn luyện Flashcard sau này.`;
+YÊU CẦU TRẢ LỜI ĐẦY ĐỦ VÀ RÕ RÀNG:
+1. 🔍 CHẨN ĐOÁN LỖI:
+   - Lỗi Ngữ pháp & Cấu trúc (SVA, thì động từ, mạo từ a/an/the, giới từ, trật tự từ, từ loại, chính tả).
+   - Lỗi Collocations & Dùng từ: Bắt các cụm từ kết hợp sai, collocation gượng gạo hoặc dịch thô từ tiếng Việt (ví dụ: dùng sai động từ đi kèm, sai giới từ trong cụm từ cố định).
+   - Nếu câu ĐÃ ĐÚNG: Xác nhận câu hoàn toàn chuẩn xác và nêu ngắn gọn điểm tốt.
+   - Nếu câu CÓ LỖI: Chỉ đích danh từ/cụm từ sai và giải thích nguyên tắc bằng tiếng Việt.
+2. 🛠️ PHIÊN BẢN SỬA LỖI CHUẨN XÁC:
+   - Đưa ra phiên bản đã được sửa sạch mọi lỗi ngữ pháp và thay thế các collocation dùng sai bằng collocation tự nhiên của người bản xứ.
+   - NGUYÊN TẮC: GIỮ NGUYÊN cấu trúc cốt lõi, giọng văn và ý tưởng ban đầu của học viên, không tự ý biến đổi sang ý khác.`;
     }
 
     const fullResponse = await this.ollama.streamToClient(res, prompt, systemPrompt);
@@ -223,7 +200,7 @@ YÊU CẦU:
           essayId,
           role: 'assistant',
           inputMethod: 'TEXT',
-          mode: actionType,
+          mode: isUpgrade ? 'UPGRADE_SENTENCE' : 'FIX_ERRORS',
           selectedText,
           content: fullResponse,
         },

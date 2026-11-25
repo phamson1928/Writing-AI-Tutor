@@ -375,22 +375,18 @@ export const WritingWorkspace: React.FC<WritingWorkspaceProps> = ({
     }
   };
 
-  // Trigger In-line action from Bubble Menu
+  // Trigger In-line action from Bubble Menu (Clean 2-part workflow)
   const handleInlineAction = async (
-    actionType: 'FIX_GRAMMAR' | 'UPGRADE_SENTENCE' | 'COLLOCATION' | 'ALL_IN_ONE',
+    actionType: 'FIX_ERRORS' | 'UPGRADE_SENTENCE' | string,
     overrideText?: string,
   ) => {
     const targetText = overrideText || selectedText;
     if (!targetText || isStreaming) return;
 
-    const actionTitle =
-      actionType === 'ALL_IN_ONE'
-        ? `⚡ Đánh giá toàn diện 3-in-1 (Lỗi + Nâng cấp Band ${aimBand.toFixed(1)} + Collocation): "${targetText}"`
-        : actionType === 'FIX_GRAMMAR'
-        ? `🔍 Kiểm tra & Sửa lỗi câu: "${targetText}"`
-        : actionType === 'UPGRADE_SENTENCE'
-        ? `✨ Nâng cấp câu theo Aim Band ${aimBand.toFixed(1)}: "${targetText}"`
-        : `💡 Gợi ý Collocations học thuật: "${targetText}"`;
+    const isUpgrade = actionType === 'UPGRADE_SENTENCE';
+    const actionTitle = isUpgrade
+      ? `✨ Nâng cấp câu & Collocations chuẩn Aim Band ${aimBand.toFixed(1)}: "${targetText}"`
+      : `🔍 Sửa lỗi toàn diện (Ngữ pháp, chính tả & Collocations): "${targetText}"`;
 
     const userMsg: TutorMessage = {
       id: Date.now().toString(),
@@ -411,7 +407,7 @@ export const WritingWorkspace: React.FC<WritingWorkspaceProps> = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           essayId: essay.id,
-          actionType,
+          actionType: isUpgrade ? 'UPGRADE_SENTENCE' : 'FIX_ERRORS',
           selectedText: targetText,
         }),
       });
@@ -837,7 +833,7 @@ export const WritingWorkspace: React.FC<WritingWorkspaceProps> = ({
             {/* Instruction helper */}
             <div className="text-[11px] text-zinc-500 mb-2 italic bg-amber-50/60 p-2 rounded-xl border border-amber-200 flex items-center gap-1.5">
               <span>💡</span>
-              <span>Bôi đen câu bất kỳ bằng chuột để: Kiểm tra lỗi, Nâng cấp câu Band {aimBand.toFixed(1)}, hoặc Lưu vào Sổ tay.</span>
+              <span>Bôi đen câu bất kỳ bằng chuột để: Sửa lỗi (Ngữ pháp + Collocation sai), Nâng cấp câu Band {aimBand.toFixed(1)}, hoặc Lưu Sổ Tay.</span>
             </div>
 
             {/* TipTap Rich Text Editor with Bubble Menu */}

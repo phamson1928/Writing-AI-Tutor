@@ -7,18 +7,16 @@ import {
   Italic,
   Sparkles,
   Search,
-  Lightbulb,
   Bookmark,
   Check,
   Undo,
   Redo,
-  Zap,
 } from 'lucide-react';
 
 interface TipTapEditorProps {
   content: string;
   onChange: (text: string, wordCount: number) => void;
-  onInlineAction: (actionType: 'FIX_GRAMMAR' | 'UPGRADE_SENTENCE' | 'COLLOCATION' | 'ALL_IN_ONE', selectedText: string) => void;
+  onInlineAction: (actionType: 'FIX_ERRORS' | 'UPGRADE_SENTENCE', selectedText: string) => void;
   onSaveToNotebook: (selectedText: string) => void;
 }
 
@@ -125,40 +123,26 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({
         </span>
       </div>
 
-      {/* TipTap Floating Bubble Menu - Bright Amber-Orange */}
+      {/* TipTap Floating Bubble Menu - Clean 2-in-1 Design */}
       <BubbleMenu
         editor={editor}
         tippyOptions={{ duration: 150, placement: 'top' }}
-        className="flex items-center gap-1 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 border-2 border-slate-950 rounded-xl shadow-neo-lg p-1.5 text-xs font-black animate-in fade-in zoom-in-95"
+        className="flex items-center gap-1.5 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 border-2 border-slate-950 rounded-xl shadow-neo-lg p-1.5 text-xs font-black animate-in fade-in zoom-in-95"
       >
         <button
           type="button"
           onClick={() => {
             const selected = getSelectedText();
-            if (selected) onInlineAction('ALL_IN_ONE', selected);
-          }}
-          className="px-2.5 py-1 bg-slate-950 text-amber-300 hover:bg-slate-800 rounded-lg flex items-center gap-1.5 transition-colors font-black shadow-xs"
-          title="Đánh giá toàn diện 3-in-1: Sửa lỗi + Nâng cấp Band + Collocations trong 1 lần bấm"
-        >
-          <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
-          <span>⚡ Toàn diện</span>
-        </button>
-
-        <span className="text-slate-950/40">|</span>
-
-        <button
-          type="button"
-          onClick={() => {
-            const selected = getSelectedText();
-            if (selected) onInlineAction('FIX_GRAMMAR', selected);
+            if (selected) onInlineAction('FIX_ERRORS', selected);
           }}
           className="px-2.5 py-1 hover:bg-black/15 text-slate-950 rounded-lg flex items-center gap-1.5 transition-colors font-black"
+          title="Kiểm tra & sửa lỗi ngữ pháp, chính tả và sửa các collocation dùng sai hoặc gượng gạo"
         >
           <Search className="w-3.5 h-3.5 stroke-[2.5]" />
           <span>Sửa lỗi</span>
         </button>
 
-        <span className="text-slate-950/40">|</span>
+        <span className="text-slate-950/40 font-bold">|</span>
 
         <button
           type="button"
@@ -167,26 +151,13 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({
             if (selected) onInlineAction('UPGRADE_SENTENCE', selected);
           }}
           className="px-2.5 py-1 hover:bg-black/15 text-slate-950 rounded-lg flex items-center gap-1.5 transition-colors font-black"
+          title="Nâng cấp toàn diện cấu trúc câu và collocations C1/C2 theo Aim Band"
         >
           <Sparkles className="w-3.5 h-3.5 stroke-[2.5]" />
           <span>Nâng cấp</span>
         </button>
 
-        <span className="text-slate-950/40">|</span>
-
-        <button
-          type="button"
-          onClick={() => {
-            const selected = getSelectedText();
-            if (selected) onInlineAction('COLLOCATION', selected);
-          }}
-          className="px-2.5 py-1 hover:bg-black/15 text-slate-950 rounded-lg flex items-center gap-1.5 transition-colors font-black"
-        >
-          <Lightbulb className="w-3.5 h-3.5 stroke-[2.5]" />
-          <span>Collocation</span>
-        </button>
-
-        <span className="text-slate-950/40">|</span>
+        <span className="text-slate-950/40 font-bold">|</span>
 
         <button
           type="button"
@@ -195,6 +166,7 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({
             if (selected) onSaveToNotebook(selected);
           }}
           className="px-2.5 py-1 bg-slate-900 text-amber-300 rounded-lg hover:bg-slate-800 flex items-center gap-1.5 transition-colors font-black shadow-xs"
+          title="Lưu từ vựng / collocation vào Sổ tay để ôn luyện Flashcard"
         >
           <Bookmark className="w-3.5 h-3.5 fill-current" />
           <span>Lưu Sổ Tay</span>
