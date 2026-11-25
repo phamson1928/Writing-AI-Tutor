@@ -126,13 +126,44 @@ export class PromptsService implements OnModuleInit {
     });
   }
 
+  private resolveUploadPath(relativeOrPath: string): string | null {
+    if (!relativeOrPath) return null;
+    const cleanName = relativeOrPath
+      .replace(/^\/uploads\//, '')
+      .replace(/^uploads[\\/]/, '');
+
+    const candidates = [
+      relativeOrPath,
+      cleanName,
+      join(process.cwd(), 'uploads', cleanName),
+      join(process.cwd(), 'server', 'uploads', cleanName),
+      join(process.cwd(), '..', 'uploads', cleanName),
+      join(process.cwd(), '..', 'server', 'uploads', cleanName),
+      join(__dirname, '..', '..', 'uploads', cleanName),
+      join(__dirname, '..', '..', 'server', 'uploads', cleanName),
+      join('C:\\Users\\pson4\\Wrtting-AI-Tutor\\server\\uploads', cleanName),
+      join('C:\\Users\\pson4\\Wrtting-AI-Tutor\\uploads', cleanName),
+    ];
+
+    for (const candidate of candidates) {
+      try {
+        if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+          return candidate;
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+    return null;
+  }
+
   async delete(id: string) {
     const prompt = await this.getById(id);
-    if (prompt.imageUrl && prompt.imageUrl.startsWith('/uploads/')) {
-      const filePath = join(process.cwd(), 'uploads', prompt.imageUrl.replace('/uploads/', ''));
-      if (fs.existsSync(filePath)) {
+    if (prompt.imageUrl) {
+      const resolved = this.resolveUploadPath(prompt.imageUrl);
+      if (resolved && fs.existsSync(resolved)) {
         try {
-          fs.unlinkSync(filePath);
+          fs.unlinkSync(resolved);
         } catch (e) {
           // ignore
         }
@@ -164,21 +195,22 @@ export class PromptsService implements OnModuleInit {
       if (!prompt.imageUrl) {
         throw new BadRequestException('Đề thi này không có hình ảnh biểu đồ để quét.');
       }
-      const uploadsDir = join(process.cwd(), 'uploads');
-      const relativeName = prompt.imageUrl.replace(/^\/uploads\//, '');
-      const localUploadPath = join(uploadsDir, relativeName);
 
       if (prompt.imageUrl.startsWith('data:image')) {
         base64 = prompt.imageUrl.split(',')[1] || '';
-      } else if (fs.existsSync(localUploadPath)) {
-        base64 = fs.readFileSync(localUploadPath).toString('base64');
-      } else if (fs.existsSync(prompt.imageUrl)) {
-        base64 = fs.readFileSync(prompt.imageUrl).toString('base64');
       } else {
-        throw new NotFoundException(
-          `Không tìm thấy file hình ảnh gốc của đề thi tại: ${prompt.imageUrl}`,
-        );
+        const resolvedPath = this.resolveUploadPath(prompt.imageUrl);
+        if (!resolvedPath) {
+          throw new NotFoundException(
+            `Không tìm thấy file hình ảnh gốc của đề thi tại: ${prompt.imageUrl}. Vui lòng kiểm tra thư mục uploads.`,
+          );
+        }
+        base64 = fs.readFileSync(resolvedPath).toString('base64');
       }
+    }
+
+    if (!base64) {
+      throw new BadRequestException('Không thể đọc dữ liệu hình ảnh để phân tích.');
     }
 
     const chartDataJson = await this.ollama.analyzeTask1Image(

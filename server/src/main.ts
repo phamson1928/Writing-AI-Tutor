@@ -15,8 +15,13 @@ async function bootstrap() {
   });
 
   // Serve static uploaded files (Task 1 charts)
-  const uploadsPath = join(process.cwd(), 'uploads');
-  app.use('/uploads', express.static(uploadsPath));
+  const uploadsCandidates = [
+    join(process.cwd(), 'uploads'),
+    join(process.cwd(), 'server', 'uploads'),
+  ];
+  for (const p of uploadsCandidates) {
+    app.use('/uploads', express.static(p));
+  }
 
   const port = process.env.PORT || 3001;
   await app.listen(port);
