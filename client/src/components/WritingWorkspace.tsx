@@ -377,14 +377,16 @@ export const WritingWorkspace: React.FC<WritingWorkspaceProps> = ({
 
   // Trigger In-line action from Bubble Menu
   const handleInlineAction = async (
-    actionType: 'FIX_GRAMMAR' | 'UPGRADE_SENTENCE' | 'COLLOCATION',
+    actionType: 'FIX_GRAMMAR' | 'UPGRADE_SENTENCE' | 'COLLOCATION' | 'ALL_IN_ONE',
     overrideText?: string,
   ) => {
     const targetText = overrideText || selectedText;
     if (!targetText || isStreaming) return;
 
     const actionTitle =
-      actionType === 'FIX_GRAMMAR'
+      actionType === 'ALL_IN_ONE'
+        ? `⚡ Đánh giá toàn diện 3-in-1 (Lỗi + Nâng cấp Band ${aimBand.toFixed(1)} + Collocation): "${targetText}"`
+        : actionType === 'FIX_GRAMMAR'
         ? `🔍 Kiểm tra & Sửa lỗi câu: "${targetText}"`
         : actionType === 'UPGRADE_SENTENCE'
         ? `✨ Nâng cấp câu theo Aim Band ${aimBand.toFixed(1)}: "${targetText}"`

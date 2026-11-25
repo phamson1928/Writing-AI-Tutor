@@ -12,12 +12,13 @@ import {
   Check,
   Undo,
   Redo,
+  Zap,
 } from 'lucide-react';
 
 interface TipTapEditorProps {
   content: string;
   onChange: (text: string, wordCount: number) => void;
-  onInlineAction: (actionType: 'FIX_GRAMMAR' | 'UPGRADE_SENTENCE' | 'COLLOCATION', selectedText: string) => void;
+  onInlineAction: (actionType: 'FIX_GRAMMAR' | 'UPGRADE_SENTENCE' | 'COLLOCATION' | 'ALL_IN_ONE', selectedText: string) => void;
   onSaveToNotebook: (selectedText: string) => void;
 }
 
@@ -130,6 +131,21 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({
         tippyOptions={{ duration: 150, placement: 'top' }}
         className="flex items-center gap-1 bg-gradient-to-r from-amber-400 via-amber-500 to-orange-500 text-slate-950 border-2 border-slate-950 rounded-xl shadow-neo-lg p-1.5 text-xs font-black animate-in fade-in zoom-in-95"
       >
+        <button
+          type="button"
+          onClick={() => {
+            const selected = getSelectedText();
+            if (selected) onInlineAction('ALL_IN_ONE', selected);
+          }}
+          className="px-2.5 py-1 bg-slate-950 text-amber-300 hover:bg-slate-800 rounded-lg flex items-center gap-1.5 transition-colors font-black shadow-xs"
+          title="Đánh giá toàn diện 3-in-1: Sửa lỗi + Nâng cấp Band + Collocations trong 1 lần bấm"
+        >
+          <Zap className="w-3.5 h-3.5 fill-current text-amber-300" />
+          <span>⚡ Toàn diện</span>
+        </button>
+
+        <span className="text-slate-950/40">|</span>
+
         <button
           type="button"
           onClick={() => {

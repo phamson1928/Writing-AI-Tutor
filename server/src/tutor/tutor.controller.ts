@@ -31,7 +31,7 @@ export class TutorController {
     @Body()
     body: {
       essayId: string;
-      actionType: 'FIX_GRAMMAR' | 'UPGRADE_SENTENCE' | 'COLLOCATION';
+      actionType: 'FIX_GRAMMAR' | 'UPGRADE_SENTENCE' | 'COLLOCATION' | 'ALL_IN_ONE';
       selectedText: string;
     },
     @Res() res: Response,

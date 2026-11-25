@@ -117,7 +117,7 @@ NGUYÊN TẮC SƯ PHẠM:
 
   async handleInlineAction(
     essayId: string,
-    actionType: 'FIX_GRAMMAR' | 'UPGRADE_SENTENCE' | 'COLLOCATION',
+    actionType: 'FIX_GRAMMAR' | 'UPGRADE_SENTENCE' | 'COLLOCATION' | 'ALL_IN_ONE',
     selectedText: string,
     res: Response,
   ) {
@@ -133,7 +133,9 @@ NGUYÊN TẮC SƯ PHẠM:
 
     // Save user request into chat history so the thread is complete
     const actionLabel =
-      actionType === 'FIX_GRAMMAR'
+      actionType === 'ALL_IN_ONE'
+        ? `⚡ Đánh giá toàn diện 3-in-1: "${selectedText}"`
+        : actionType === 'FIX_GRAMMAR'
         ? `Kiểm tra ngữ pháp câu: "${selectedText}"`
         : actionType === 'UPGRADE_SENTENCE'
         ? `Nâng cấp câu theo Aim Band ${essay.aimBand}: "${selectedText}"`
@@ -166,7 +168,23 @@ NGUYÊN TẮC SƯ PHẠM:
     const systemPrompt = this.buildSystemPrompt(essay, topErrors);
     let prompt = '';
 
-    if (actionType === 'FIX_GRAMMAR') {
+    if (actionType === 'ALL_IN_ONE') {
+      prompt = `Bạn là Gia sư IELTS chuyên sâu toàn diện. Tôi đang băn khoăn về cả ngữ pháp, độ hay và collocations của câu/đoạn sau:
+"${selectedText}"
+Mục tiêu Aim Band: ${essay.aimBand}
+
+YÊU CẦU TRẢ LỜI ĐẦY ĐỦ 3 PHẦN THIẾT THỰC (Định dạng rõ ràng, ngắn gọn, súc tích):
+1. 🔍 ĐỘ CHUẨN XÁC & SỬA LỖI (Grammar & Accuracy):
+   - Nếu có lỗi ngữ pháp/từ loại: Chỉ rõ lỗi sai và đưa ra phiên bản sửa lỗi tối thiểu (giữ nguyên cấu trúc của tôi).
+   - Nếu câu đã hoàn toàn đúng ngữ pháp: Xác nhận câu đã chuẩn xác.
+
+2. ✨ NÂNG CẤP CÂU CHUẨN AIM BAND ${essay.aimBand}:
+   - Đưa ra 1 phiên bản viết lại (Rewrite) xuất sắc nhất: tự nhiên, học thuật và chuẩn phong cách IELTS Band ${essay.aimBand}.
+   - Chỉ rõ điểm sáng giúp nâng band điểm (từ vựng C1/C2, cấu trúc câu phức, tính liên kết).
+
+3. 💡 COLLOCATIONS ĐẮT GIÁ:
+   - Gợi ý 2-3 cụm Collocations C1/C2 liên quan nhất (kèm nghĩa tiếng Việt) để tôi có thể học và bôi đen bấm "Lưu Sổ Tay".`;
+    } else if (actionType === 'FIX_GRAMMAR') {
       prompt = `Bạn là Gia sư IELTS chuyên sâu về Ngữ pháp & Độ chính xác (GRA). Hãy kiểm tra câu/đoạn sau:
 "${selectedText}"
 
