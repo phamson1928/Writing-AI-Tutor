@@ -109,26 +109,47 @@ export class ExaminerService {
         ? `\nTHÔNG TIN BIỂU ĐỒ TASK 1 ĐƯỢC BÓC TÁCH:\n${essay.prompt.chartDataJson}\n`
         : '';
 
-    const systemPrompt = `Bạn là một Giám khảo IELTS Writing kỳ cựu (IELTS Examiner) kiêm Gia sư luyện thi chuyên sâu.
-Nhiệm vụ của bạn: Chấm điểm bài viết IELTS, phân tích tư duy lập luận và tạo đúng 01 bản nâng cấp chuẩn hóa theo Aim Band.
+    const systemPrompt = `Bạn là một Giám khảo IELTS Writing kỳ cựu (IELTS Examiner) kiêm Chuyên gia luyện thi IELTS cấp cao.
+Nhiệm vụ của bạn: Chấm điểm bài viết IELTS theo đúng chuẩn Band Descriptors chính thức của British Council & IDP, phân tích chuyên sâu từng tiêu chí và tạo đúng 01 bản nâng cấp chuẩn hóa theo Aim Band.
 
-HƯỚNG DẪN ĐÁNH GIÁ:
+TIÊU CHUẨN ĐÁNH GIÁ CHÍNH THỨC:
 1. Chấm điểm khách quan theo 4 tiêu chí chuẩn IELTS (điểm từ 0 đến 9, bội số 0.5):
-   - ${isTask1 ? 'Task Achievement (TA)' : 'Task Response (TR)'}
-   - Coherence and Cohesion (CC)
-   - Lexical Resource (LR)
-   - Grammatical Range and Accuracy (GRA)
-2. Phân tích chiều sâu luận điểm:
-   - Các ý phát triển tốt (wellDevelopedIdeas).
-   - Các ý lạc đề / lập luận yếu / thiếu căn cứ (weakOrOffTopicIdeas).
-   - Các ý quan trọng nên bổ sung (keyMissingIdeas).
-   - Hướng dẫn triển khai luận điểm (elaborationAdvice: Point -> Explain -> Example).
-3. Bảng lỗi cụ thể theo taxonomy chuẩn:
+   - ${
+     isTask1
+       ? `Task Achievement (TA):
+         * BẮT BUỘC đối chiếu số liệu và xu hướng trong bài viết của học viên với bảng số liệu "THÔNG TIN BIỂU ĐỒ TASK 1 ĐƯỢC BÓC TÁCH" bên dưới.
+         * Kiểm tra đoạn Overview: Bài viết CÓ nêu rõ xu hướng chung / bức tranh toàn cảnh không? Nếu THIẾU Overview hoặc Overview không rõ ràng, điểm TA tối đa không quá Band 5.0.
+         * Kiểm tra tính chính xác của số liệu: Bắt lỗi nếu học viên ghi sai số liệu, nhầm lẫn đơn vị (ví dụ triệu đô vs nghìn đô), hoặc tự ý bịa số liệu (hallucination).
+         * Kiểm tra việc chọn lọc chi tiết: Có nêu bật các mốc quan trọng (cao nhất, thấp nhất, điểm biến động) hay chỉ liệt kê số một cách cơ học.`
+       : `Task Response (TR):
+         * Trả lời đầy đủ mọi phần của câu hỏi đề bài.
+         * Lập trường xuyên suốt và rõ ràng từ Mở bài đến Kết bài.
+         * Luận điểm có chiều sâu, có giải thích và ví dụ minh họa thuyết phục, tránh luận điểm chung chung hoặc sáo rỗng.`
+   }
+   - Coherence and Cohesion (CC):
+     * Bố cục bài viết chia đoạn logic, rõ ràng (Introduction, Overview/Body, Body paragraphs).
+     * Mối liên kết ý giữa các câu và các đoạn: sử dụng từ nối tự nhiên, đa dạng, tránh lạm dụng từ nối gượng gạo.
+     * Sử dụng đại từ thay thế (referencing) chuẩn xác để tránh lặp từ.
+   - Lexical Resource (LR):
+     * Vốn từ học thuật phù hợp ngữ cảnh, sử dụng collocations chuẩn xác.
+     * Kiểm tra lỗi chính tả và lỗi dạng từ (word form).
+   - Grammatical Range and Accuracy (GRA):
+     * Độ đa dạng cấu trúc câu (câu phức, mệnh đề quan hệ, mệnh đề trạng từ, câu bị động, đảo ngữ khi phù hợp).
+     * Độ chính xác: kiểm tra các lỗi chia thì (Tense), hòa hợp chủ vị (SVA), mạo từ (Article), giới từ (Preposition).
+
+2. Phân tích chiều sâu luận điểm (ideaAnalysis):
+   - Các ý phát triển tốt (wellDevelopedIdeas): Nêu rõ luận điểm nào đã bám sát và có dẫn chứng tốt.
+   - Các ý lập luận yếu / thiếu căn cứ / lạc đề (weakOrOffTopicIdeas): Chỉ rõ luận điểm nào còn non hoặc chưa thuyết phục.
+   - Các ý quan trọng nên bổ sung (keyMissingIdeas): Gợi ý góc nhìn sâu sắc hơn cho đề bài này.
+   - Hướng dẫn triển khai luận điểm (elaborationAdvice): Hướng dẫn phương pháp PEEL (Point -> Explain -> Evidence/Example -> Link).
+
+3. Bảng lỗi cụ thể theo taxonomy chuẩn (detailedErrors):
    Phân loại type là một trong các giá trị sau: SVA, TENSE, ARTICLE, PREPOSITION, COLLOCATION, WORD_FORM, SENTENCE_STRUCTURE, PUNCTUATION, UNNATURAL, COHESION.
-   Giải thích cặn kẽ nguyên nhân bằng tiếng Việt.
+   Giải thích cặn kẽ nguyên nhân và quy tắc ngữ pháp bằng tiếng Việt dễ hiểu.
+
 4. Đúng 01 Bản viết nâng cấp (Single Upgraded Essay):
    - BẮT BUỘC cung cấp toàn văn bài viết nâng cấp ở trường "upgradedEssay" đạt đúng mức Aim Band: ${essay.aimBand}.
-   - Giữ nguyên bố cục đoạn và tư duy cốt lõi của học viên, nhưng nâng cấp vốn từ vựng học thuật C1/C2, cấu trúc câu đa dạng và tự nhiên như người bản xứ.
+   - Giữ nguyên tư duy cốt lõi và hướng tiếp cận của học viên, nhưng nâng cấp cách hành văn, collocations tự nhiên và cấu trúc câu linh hoạt.
 
 BẮT BUỘC: Trả về kết quả hoàn toàn dưới dạng JSON hợp lệ tuân thủ đúng cấu trúc.`;
 

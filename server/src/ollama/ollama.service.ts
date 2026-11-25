@@ -225,18 +225,33 @@ export class OllamaService {
       this.logger.warn(`Could not connect to Ollama to check models: ${e.message}`);
     }
 
-    const prompt = `Analyze this IELTS Writing Task 1 visual chart/diagram.
-Question: ${questionText}
+    const prompt = `You are an expert IELTS Writing Task 1 visual data extractor.
+Analyze this IELTS Writing Task 1 chart/diagram very carefully.
+Question context: ${questionText}
 
-Output a clean, valid JSON object with the following structure:
+Step-by-step visual analysis:
+1. Chart Title & Axis Labels: Read the exact chart title, Y-axis unit (e.g. $ million, percentage, thousands), and X-axis categories.
+2. Legend & Grouping: If there are grouped bars or multiple lines, carefully identify what each color/symbol represents (e.g. Red bar = Year 1, Blue bar = Year 2).
+3. Value per Category: Look at each item along the X-axis and note its height/value for each year/group according to the Y-axis grid lines.
+4. Highest & Lowest: Explicitly determine the highest overall category and the lowest category.
+5. Key Comparisons & Trends: Note which items grew, which stayed the same, and which declined.
+6. Expected Overview: Write a concise, band 8+ overview summarizing the main features without reciting every single number.
+
+Return ONLY a valid JSON object matching this exact schema:
 {
-  "chart_type": "Line graph | Bar chart | Pie chart | Table | Map | Process",
-  "main_subject": "Brief description of what is being measured and time period",
-  "key_trends": ["Main trend 1", "Main trend 2"],
-  "significant_data_points": ["Notable figure 1", "Notable figure 2"],
-  "overview_summary": "1-2 sentence overview of significant overall features"
+  "chart_type": "Bar chart | Line graph | Pie chart | Table | Process | Map",
+  "main_subject": "Exact subject being measured, units of measurement, and time periods covered",
+  "key_trends": [
+    "Overall trend 1 (e.g. Category A had the highest spending in both years, rising from ~$X to ~$Y)",
+    "Overall trend 2 (e.g. Category B was the lowest and the only item to decline from $X to $Y)"
+  ],
+  "significant_data_points": [
+    "Category 1: Year X value vs Year Y value",
+    "Category 2: Year X value vs Year Y value"
+  ],
+  "overview_summary": "Clear, professional 1-2 sentence IELTS band 8+ overview summarizing overall patterns."
 }
-Output ONLY the raw JSON without markdown formatting.`;
+Return raw JSON ONLY. No markdown, no conversational text.`;
 
     try {
       const response = await axios.post(
