@@ -74,6 +74,16 @@ export const WritingWorkspace: React.FC<WritingWorkspaceProps> = ({
   const [showChartDetails, setShowChartDetails] = useState(false);
   const [frequentErrors, setFrequentErrors] = useState<Array<{ type: string; count: number }>>([]);
 
+  // Parsed Task 1 Chart Data if present
+  const parsedChartData = React.useMemo(() => {
+    if (!essay.prompt.chartDataJson) return null;
+    try {
+      return JSON.parse(essay.prompt.chartDataJson);
+    } catch {
+      return null;
+    }
+  }, [essay.prompt.chartDataJson]);
+
   // Fetch top frequent errors for personalized proactive reminder
   useEffect(() => {
     fetch('/api/errors/frequent?limit=2')
@@ -466,11 +476,79 @@ export const WritingWorkspace: React.FC<WritingWorkspaceProps> = ({
                   />
                 </div>
 
-                {showChartDetails && essay.prompt.chartDataJson && (
-                  <div className="mt-2 p-3 bg-amber-50 rounded-2xl border border-retro-border text-xs text-zinc-800 font-mono">
-                    <pre className="whitespace-pre-wrap text-[11px]">
-                      {essay.prompt.chartDataJson}
-                    </pre>
+                {showChartDetails && (
+                  <div className="mt-3 p-4 bg-amber-50/95 rounded-2xl border-2 border-retro-border text-xs text-slate-900 space-y-3 shadow-neo-sm">
+                    <div className="flex items-center justify-between border-b border-amber-200/80 pb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">🤖</span>
+                        <span className="font-black text-xs text-slate-900 uppercase">
+                          Căn Cứ Dữ Liệu Bóc Tách (Vision AI Ground Truth)
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                        {parsedChartData?.chart_type || 'Biểu đồ Task 1'}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-slate-600 italic">
+                      Dưới đây là các số liệu và xu hướng mà AI đã "đọc" được từ ảnh biểu đồ để làm căn cứ chấm tiêu chí <strong>Task Achievement (TA)</strong> cho bạn:
+                    </p>
+
+                    {parsedChartData ? (
+                      <div className="space-y-2.5">
+                        {parsedChartData.main_subject && (
+                          <div className="bg-white p-2.5 rounded-xl border border-amber-200/80 shadow-xs">
+                            <span className="font-extrabold text-[11px] text-amber-950 block mb-0.5">
+                              🎯 Đối tượng đo lường & Mốc thời gian:
+                            </span>
+                            <span className="text-slate-800 font-medium text-xs">
+                              {parsedChartData.main_subject}
+                            </span>
+                          </div>
+                        )}
+
+                        {parsedChartData.key_trends && Array.isArray(parsedChartData.key_trends) && (
+                          <div className="bg-white p-2.5 rounded-xl border border-amber-200/80 shadow-xs">
+                            <span className="font-extrabold text-[11px] text-amber-950 block mb-1">
+                              📈 Xu hướng lớn (Overall Trends):
+                            </span>
+                            <ul className="list-disc pl-4 space-y-1 text-slate-700 font-medium text-xs">
+                              {parsedChartData.key_trends.map((trend: string, idx: number) => (
+                                <li key={idx}>{trend}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {parsedChartData.significant_data_points && Array.isArray(parsedChartData.significant_data_points) && (
+                          <div className="bg-white p-2.5 rounded-xl border border-amber-200/80 shadow-xs">
+                            <span className="font-extrabold text-[11px] text-amber-950 block mb-1">
+                              🔢 Các mốc số liệu nổi bật (Key Figures):
+                            </span>
+                            <ul className="list-disc pl-4 space-y-1 text-slate-700 font-medium text-xs">
+                              {parsedChartData.significant_data_points.map((pt: string, idx: number) => (
+                                <li key={idx}>{pt}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {parsedChartData.overview_summary && (
+                          <div className="bg-emerald-50/90 p-2.5 rounded-xl border border-emerald-200 shadow-xs">
+                            <span className="font-extrabold text-[11px] text-emerald-900 block mb-0.5">
+                              💡 Tóm tắt tổng quan chuẩn (Standard Overview):
+                            </span>
+                            <span className="text-slate-800 font-medium text-xs">
+                              {parsedChartData.overview_summary}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <pre className="whitespace-pre-wrap text-[11px] bg-white p-2.5 rounded-xl border border-amber-200 font-mono">
+                        {essay.prompt.chartDataJson || 'Chưa có số liệu bóc tách cho đề này.'}
+                      </pre>
+                    )}
                   </div>
                 )}
               </div>

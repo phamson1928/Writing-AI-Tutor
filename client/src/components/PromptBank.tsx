@@ -21,6 +21,7 @@ export const PromptBank: React.FC<PromptBankProps> = ({
   const [selectedAimBand, setSelectedAimBand] = useState<number>(7.0);
   const [isCreating, setIsCreating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // New prompt form state
   const [taskType, setTaskType] = useState<'TASK_1' | 'TASK_2'>('TASK_2');
@@ -59,15 +60,23 @@ export const PromptBank: React.FC<PromptBankProps> = ({
       });
 
       if (res.ok) {
+        const createdData = await res.json().catch(() => null);
+        const savedTitle = createdData?.title || title;
         setIsCreating(false);
         setTitle('');
         setQuestionText('');
         setImageFile(null);
         setImagePreview(null);
+        setSuccessMessage(`Đã thêm thành công đề thi mới: "${savedTitle}"! Đề thi đã được lưu và sẵn sàng để luyện viết.`);
+        setTimeout(() => setSuccessMessage(null), 6000);
         onRefresh();
+      } else {
+        const errData = await res.json().catch(() => null);
+        alert(`Không thể tạo đề thi: ${errData?.message || 'Lỗi kết nối máy chủ'}`);
       }
     } catch (err) {
       console.error('Failed to create prompt:', err);
+      alert('Lỗi kết nối khi gửi dữ liệu đề thi.');
     } finally {
       setSubmitting(false);
     }
@@ -101,6 +110,28 @@ export const PromptBank: React.FC<PromptBankProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto py-6 px-4">
+      {/* Success Notification Banner */}
+      {successMessage && (
+        <div className="mb-6 p-4 bg-emerald-100 border-2 border-slate-900 rounded-2xl shadow-neo flex items-center justify-between gap-3 text-emerald-950 animate-pop-in">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black text-sm border-2 border-slate-900 shadow-neo-sm shrink-0">
+              ✓
+            </div>
+            <div>
+              <p className="font-black text-sm text-slate-900">Tạo Đề Thi Mới Thành Công!</p>
+              <p className="text-xs text-slate-700 font-medium">{successMessage}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setSuccessMessage(null)}
+            className="w-7 h-7 rounded-lg bg-white hover:bg-slate-100 text-slate-800 border-2 border-slate-900 flex items-center justify-center text-xs font-black shadow-neo-sm shrink-0 transition-colors"
+            title="Đóng thông báo"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Top Banner Control Bar */}
       <div className="bg-white/95 rounded-3xl border-2 border-retro-border p-5 mb-6 shadow-neo flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
