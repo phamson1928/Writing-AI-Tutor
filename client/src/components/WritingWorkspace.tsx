@@ -75,15 +75,60 @@ export const WritingWorkspace: React.FC<WritingWorkspaceProps> = ({
   const [showChartDetails, setShowChartDetails] = useState(false);
   const [frequentErrors, setFrequentErrors] = useState<Array<{ type: string; count: number }>>([]);
 
-  // Parsed Task 1 Chart Data if present
+  // Parsed Task 1 Chart Data if present (Safely normalized)
   const parsedChartData = React.useMemo(() => {
     if (!essay.prompt.chartDataJson) return null;
     try {
-      return JSON.parse(essay.prompt.chartDataJson);
+      const raw = JSON.parse(essay.prompt.chartDataJson);
+      if (!raw || typeof raw !== 'object') return null;
+
+      // Normalize key_trends to array of strings
+      const normalizedTrends: string[] = Array.isArray(raw.key_trends)
+        ? raw.key_trends.map((t: any) => {
+            if (typeof t === 'string') return t;
+            if (typeof t === 'object' && t !== null) {
+              return Object.entries(t)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(', ');
+            }
+            return String(t || '');
+          }).filter(Boolean)
+        : [];
+
+      // Normalize significant_data_points to array of strings
+      const normalizedPoints: string[] = Array.isArray(raw.significant_data_points)
+        ? raw.significant_data_points.map((pt: any) => {
+            if (typeof pt === 'string') return pt;
+            if (typeof pt === 'object' && pt !== null) {
+              const parts: string[] = [];
+              if (pt.category) parts.push(String(pt.category));
+              if (pt.year) parts.push(`Year ${pt.year}`);
+              if (pt.spending !== undefined) parts.push(`$${pt.spending}M`);
+              else if (pt.value !== undefined) parts.push(String(pt.value));
+              if (pt.spending_trend) parts.push(`(${pt.spending_trend})`);
+              else if (pt.trend) parts.push(`(${pt.trend})`);
+
+              if (parts.length > 0) return parts.join(' - ');
+              return Object.entries(pt)
+                .map(([k, v]) => `${k}: ${v}`)
+                .join(', ');
+            }
+            return String(pt || '');
+          }).filter(Boolean)
+        : [];
+
+      return {
+        ...raw,
+        chart_type: typeof raw.chart_type === 'string' ? raw.chart_type : 'Bar chart',
+        main_subject: typeof raw.main_subject === 'string' ? raw.main_subject : (essay.prompt.questionText || ''),
+        key_trends: normalizedTrends,
+        significant_data_points: normalizedPoints,
+        overview_summary: typeof raw.overview_summary === 'string' ? raw.overview_summary : '',
+      };
     } catch {
       return null;
     }
-  }, [essay.prompt.chartDataJson]);
+  }, [essay.prompt.chartDataJson, essay.prompt.questionText]);
 
   // Edit Chart Data state
   const [isEditingChart, setIsEditingChart] = useState(false);
@@ -717,7 +762,17 @@ export const WritingWorkspace: React.FC<WritingWorkspaceProps> = ({
                     </div>
 
                     {/* Notice if vision model was missing when prompt was created or template was used */}
-                    {(parsedChartData?.missingVisionModel || parsedChartData?.key_trends?.[0]?.includes('chưa') || parsedChartData?.significant_data_points?.[0]?.includes('Highest point')) && !isEditingChart && (
+                    {Boolean(
+                      parsedChartData?.missingVisionModel ||
+                      (typeof parsedChartData?.key_trends?.[0] === 'string' && (
+                        parsedChartData.key_trends[0].includes('chưa') ||
+                        parsedChartData.key_trends[0].includes('to be confirmed')
+                      )) ||
+                      (typeof parsedChartData?.significant_data_points?.[0] === 'string' && (
+                        parsedChartData.significant_data_points[0].includes('Highest point') ||
+                        parsedChartData.significant_data_points[0].includes('to be confirmed')
+                      ))
+                    ) && !isEditingChart && (
                       <div className="p-3.5 bg-amber-100/90 rounded-xl border border-amber-300 text-amber-950 text-xs space-y-2.5 shadow-xs">
                         <div className="flex items-center gap-1.5 font-black text-amber-900">
                           <span>💡</span>
