@@ -55,7 +55,7 @@ export class OllamaService {
         },
         {
           responseType: 'stream',
-          timeout: 60000,
+          timeout: 180000,
         },
       );
 
@@ -156,7 +156,7 @@ export class OllamaService {
             num_ctx: 4096,
           },
         },
-        { timeout: 90000 },
+        { timeout: 180000 },
       );
 
       return this.cleanAndParseJson<T>(response.data.response);
@@ -176,7 +176,7 @@ export class OllamaService {
               num_ctx: 4096,
             },
           },
-          { timeout: 90000 },
+          { timeout: 180000 },
         );
         return this.cleanAndParseJson<T>(retryResponse.data.response);
       } catch (retryErr: any) {
@@ -187,6 +187,44 @@ export class OllamaService {
   }
 
   async analyzeTask1Image(base64Image: string, questionText: string): Promise<string> {
+    let targetVisionModel = this.visionModel;
+
+    // Probe installed models in Ollama to auto-detect any vision model
+    try {
+      const tagsRes = await axios.get(`${this.host}/api/tags`, { timeout: 3000 });
+      const installedModels: string[] = (tagsRes.data.models || []).map((m: any) => m.name);
+
+      if (!installedModels.includes(targetVisionModel)) {
+        const found = installedModels.find((m) =>
+          m.includes('llava') ||
+          m.includes('moondream') ||
+          m.includes('vision') ||
+          m.includes('vl') ||
+          m.includes('minicpm'),
+        );
+
+        if (found) {
+          targetVisionModel = found;
+          this.logger.log(`Auto-detected installed Vision Model: ${targetVisionModel}`);
+        } else {
+          this.logger.warn(
+            `No Vision Model found in Ollama (Installed: ${installedModels.join(', ') || 'none'}). You can install one with 'ollama run llava'.`,
+          );
+          return JSON.stringify({
+            chart_type: 'Biểu đồ Task 1',
+            main_subject: questionText,
+            key_trends: ['(Chưa nhận diện tự động do Ollama chưa cài Vision Model như llava hay qwen2.5-vl)'],
+            significant_data_points: ['(Bấm nút "Chỉnh sửa số liệu" bên dưới để nhập số liệu thực tế từ ảnh)'],
+            overview_summary: 'Tổng quan số liệu cần được nhập hoặc nhận diện từ hình ảnh.',
+            missingVisionModel: true,
+            needsManualInput: true,
+          });
+        }
+      }
+    } catch (e: any) {
+      this.logger.warn(`Could not connect to Ollama to check models: ${e.message}`);
+    }
+
     const prompt = `Analyze this IELTS Writing Task 1 visual chart/diagram.
 Question: ${questionText}
 
@@ -204,13 +242,13 @@ Output ONLY the raw JSON without markdown formatting.`;
       const response = await axios.post(
         `${this.host}/api/generate`,
         {
-          model: this.visionModel,
+          model: targetVisionModel,
           prompt,
           images: [base64Image],
           stream: false,
           options: { temperature: 0.1 },
         },
-        { timeout: 90000 },
+        { timeout: 180000 },
       );
 
       const raw = response.data.response.trim();
@@ -219,11 +257,13 @@ Output ONLY the raw JSON without markdown formatting.`;
     } catch (err: any) {
       this.logger.warn(`Vision model failed or not installed: ${err.message}. Generating structured template.`);
       return JSON.stringify({
-        chart_type: 'Visual Chart',
+        chart_type: 'Biểu đồ Task 1',
         main_subject: questionText,
-        key_trends: ['Detailed numbers and trends to be confirmed from image'],
-        significant_data_points: ['Highest point', 'Lowest point'],
-        overview_summary: 'Overall trend extracted from task prompt.',
+        key_trends: ['(Chưa nhận diện tự động do mô hình Vision bị lỗi kết nối)'],
+        significant_data_points: ['(Bấm nút "Chỉnh sửa số liệu" để nhập số liệu thực tế từ ảnh)'],
+        overview_summary: 'Tổng quan số liệu cần được nhập hoặc nhận diện từ hình ảnh.',
+        missingVisionModel: true,
+        needsManualInput: true,
       });
     }
   }

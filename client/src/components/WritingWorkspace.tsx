@@ -84,6 +84,70 @@ export const WritingWorkspace: React.FC<WritingWorkspaceProps> = ({
     }
   }, [essay.prompt.chartDataJson]);
 
+  // Edit Chart Data state
+  const [isEditingChart, setIsEditingChart] = useState(false);
+  const [editChartType, setEditChartType] = useState('');
+  const [editSubject, setEditSubject] = useState('');
+  const [editTrends, setEditTrends] = useState('');
+  const [editFigures, setEditFigures] = useState('');
+  const [editOverview, setEditOverview] = useState('');
+  const [isSavingChart, setIsSavingChart] = useState(false);
+
+  const handleStartEditChart = () => {
+    setEditChartType(parsedChartData?.chart_type || 'Bar chart');
+    setEditSubject(parsedChartData?.main_subject || essay.prompt.questionText || '');
+    setEditTrends(
+      Array.isArray(parsedChartData?.key_trends)
+        ? parsedChartData.key_trends.join('\n')
+        : ''
+    );
+    setEditFigures(
+      Array.isArray(parsedChartData?.significant_data_points)
+        ? parsedChartData.significant_data_points.join('\n')
+        : ''
+    );
+    setEditOverview(parsedChartData?.overview_summary || '');
+    setIsEditingChart(true);
+  };
+
+  const handleSaveChartData = async () => {
+    setIsSavingChart(true);
+    const updatedPayload = {
+      chart_type: editChartType.trim() || 'Bar chart',
+      main_subject: editSubject.trim(),
+      key_trends: editTrends.split('\n').map((s) => s.trim()).filter(Boolean),
+      significant_data_points: editFigures.split('\n').map((s) => s.trim()).filter(Boolean),
+      overview_summary: editOverview.trim(),
+      manualEdited: true,
+    };
+
+    try {
+      const res = await fetch(`/api/prompts/${essay.prompt.id}/chart-data`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chartDataJson: JSON.stringify(updatedPayload) }),
+      });
+
+      if (res.ok) {
+        onUpdateEssay({
+          ...essay,
+          prompt: {
+            ...essay.prompt,
+            chartDataJson: JSON.stringify(updatedPayload),
+          },
+        });
+        setIsEditingChart(false);
+      } else {
+        alert('Không thể cập nhật số liệu biểu đồ. Vui lòng kiểm tra lại backend.');
+      }
+    } catch (err) {
+      console.error('Update chart data failed:', err);
+      alert('Lỗi kết nối khi cập nhật số liệu.');
+    } finally {
+      setIsSavingChart(false);
+    }
+  };
+
   // Fetch top frequent errors for personalized proactive reminder
   useEffect(() => {
     fetch('/api/errors/frequent?limit=2')
@@ -478,76 +542,200 @@ export const WritingWorkspace: React.FC<WritingWorkspaceProps> = ({
 
                 {showChartDetails && (
                   <div className="mt-3 p-4 bg-amber-50/95 rounded-2xl border-2 border-retro-border text-xs text-slate-900 space-y-3 shadow-neo-sm">
-                    <div className="flex items-center justify-between border-b border-amber-200/80 pb-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-amber-200/80 pb-2">
                       <div className="flex items-center gap-2">
                         <span className="text-sm">🤖</span>
                         <span className="font-black text-xs text-slate-900 uppercase">
                           Căn Cứ Dữ Liệu Bóc Tách (Vision AI Ground Truth)
                         </span>
                       </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
-                        {parsedChartData?.chart_type || 'Biểu đồ Task 1'}
-                      </span>
-                    </div>
-
-                    <p className="text-[11px] text-slate-600 italic">
-                      Dưới đây là các số liệu và xu hướng mà AI đã "đọc" được từ ảnh biểu đồ để làm căn cứ chấm tiêu chí <strong>Task Achievement (TA)</strong> cho bạn:
-                    </p>
-
-                    {parsedChartData ? (
-                      <div className="space-y-2.5">
-                        {parsedChartData.main_subject && (
-                          <div className="bg-white p-2.5 rounded-xl border border-amber-200/80 shadow-xs">
-                            <span className="font-extrabold text-[11px] text-amber-950 block mb-0.5">
-                              🎯 Đối tượng đo lường & Mốc thời gian:
-                            </span>
-                            <span className="text-slate-800 font-medium text-xs">
-                              {parsedChartData.main_subject}
-                            </span>
-                          </div>
-                        )}
-
-                        {parsedChartData.key_trends && Array.isArray(parsedChartData.key_trends) && (
-                          <div className="bg-white p-2.5 rounded-xl border border-amber-200/80 shadow-xs">
-                            <span className="font-extrabold text-[11px] text-amber-950 block mb-1">
-                              📈 Xu hướng lớn (Overall Trends):
-                            </span>
-                            <ul className="list-disc pl-4 space-y-1 text-slate-700 font-medium text-xs">
-                              {parsedChartData.key_trends.map((trend: string, idx: number) => (
-                                <li key={idx}>{trend}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {parsedChartData.significant_data_points && Array.isArray(parsedChartData.significant_data_points) && (
-                          <div className="bg-white p-2.5 rounded-xl border border-amber-200/80 shadow-xs">
-                            <span className="font-extrabold text-[11px] text-amber-950 block mb-1">
-                              🔢 Các mốc số liệu nổi bật (Key Figures):
-                            </span>
-                            <ul className="list-disc pl-4 space-y-1 text-slate-700 font-medium text-xs">
-                              {parsedChartData.significant_data_points.map((pt: string, idx: number) => (
-                                <li key={idx}>{pt}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {parsedChartData.overview_summary && (
-                          <div className="bg-emerald-50/90 p-2.5 rounded-xl border border-emerald-200 shadow-xs">
-                            <span className="font-extrabold text-[11px] text-emerald-900 block mb-0.5">
-                              💡 Tóm tắt tổng quan chuẩn (Standard Overview):
-                            </span>
-                            <span className="text-slate-800 font-medium text-xs">
-                              {parsedChartData.overview_summary}
-                            </span>
-                          </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-300">
+                          {parsedChartData?.chart_type || 'Biểu đồ Task 1'}
+                        </span>
+                        {!isEditingChart && (
+                          <button
+                            type="button"
+                            onClick={handleStartEditChart}
+                            className="text-[11px] font-black px-2.5 py-1 rounded-xl bg-white hover:bg-amber-100 text-slate-900 border border-slate-900 shadow-neo-sm active:translate-y-0.5 transition-all flex items-center gap-1"
+                          >
+                            ✏️ Nhập / Chỉnh Sửa Số Liệu
+                          </button>
                         )}
                       </div>
+                    </div>
+
+                    {/* Notice if vision model is missing or template was used */}
+                    {(parsedChartData?.missingVisionModel || parsedChartData?.key_trends?.[0]?.includes('chưa') || parsedChartData?.significant_data_points?.[0]?.includes('Highest point')) && !isEditingChart && (
+                      <div className="p-3 bg-amber-100/90 rounded-xl border border-amber-300 text-amber-950 text-xs space-y-1 shadow-xs">
+                        <div className="flex items-center gap-1.5 font-black text-amber-900">
+                          <span>💡</span>
+                          <span>Chưa có Vision Model để AI tự động quét ảnh</span>
+                        </div>
+                        <p className="text-[11px] leading-relaxed">
+                          Trong Ollama trên máy bạn hiện chưa có mô hình đọc ảnh (Vision Model như <code>llava</code> hoặc <code>qwen2.5-vl</code>). 
+                          Bạn có thể mở Terminal gõ lệnh <code className="bg-white px-1.5 py-0.5 rounded font-mono font-bold text-slate-900">ollama run llava</code> để tải, 
+                          <strong> hoặc bấm ngay nút "✏️ Nhập / Chỉnh Sửa Số Liệu" ở trên</strong> để điền các con số từ ảnh vào đây cho AI làm căn cứ chấm bài!
+                        </p>
+                      </div>
+                    )}
+
+                    {isEditingChart ? (
+                      /* In-Place Chart Data Editor Form */
+                      <div className="space-y-3 bg-white p-3.5 rounded-2xl border-2 border-retro-border shadow-neo-sm animate-pop-in">
+                        <div className="flex items-center justify-between pb-1 border-b border-slate-200">
+                          <span className="font-black text-xs text-slate-900">
+                            ✏️ Điền / Chỉnh Sửa Số Liệu Chuẩn Từ Biểu Đồ
+                          </span>
+                          <span className="text-[11px] text-slate-500">Dùng làm đáp án chấm Task Achievement</span>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">
+                            Dạng Biểu Đồ
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ví dụ: Bar chart, Line graph, Pie chart"
+                            value={editChartType}
+                            onChange={(e) => setEditChartType(e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs rounded-xl border-2 border-retro-border bg-slate-50 outline-none font-medium"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">
+                            🎯 Đối Tượng & Mốc Thời Gian
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ví dụ: Spending per household in the US on five products, 2010 and 2014 ($ million)"
+                            value={editSubject}
+                            onChange={(e) => setEditSubject(e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs rounded-xl border-2 border-retro-border bg-slate-50 outline-none font-medium"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">
+                            📈 Xu Hướng Lớn (Mỗi dòng 1 ý)
+                          </label>
+                          <textarea
+                            rows={2}
+                            placeholder="Ví dụ:&#10;Food là khoản chi lớn nhất trong cả 2 năm&#10;Books là khoản chi duy nhất giảm mạnh"
+                            value={editTrends}
+                            onChange={(e) => setEditTrends(e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs rounded-xl border-2 border-retro-border bg-slate-50 outline-none font-medium resize-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">
+                            🔢 Các Mốc Số Liệu Nổi Bật (Mỗi dòng 1 số liệu)
+                          </label>
+                          <textarea
+                            rows={3}
+                            placeholder="Ví dụ:&#10;Food: $3700m (2010) tăng lên $4400m (2014)&#10;Clothes: giữ nguyên ở mức khoảng $2500m&#10;Books: giảm từ $1000m xuống còn $500m"
+                            value={editFigures}
+                            onChange={(e) => setEditFigures(e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs rounded-xl border-2 border-retro-border bg-slate-50 outline-none font-medium resize-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-black text-slate-700 uppercase mb-1">
+                            💡 Tóm Tắt Tổng Quan Chuẩn (Expected Overview)
+                          </label>
+                          <textarea
+                            rows={2}
+                            placeholder="Ví dụ: Overall, food accounted for the highest spending in both years, while books had the lowest figures and was the only category to decline."
+                            value={editOverview}
+                            onChange={(e) => setEditOverview(e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs rounded-xl border-2 border-retro-border bg-slate-50 outline-none font-medium resize-none"
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingChart(false)}
+                            className="px-3 py-1.5 rounded-xl border-2 border-slate-900 bg-white hover:bg-slate-100 text-xs font-black shadow-neo-sm"
+                          >
+                            Hủy
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isSavingChart}
+                            onClick={handleSaveChartData}
+                            className="btn-neo-primary px-4 py-1.5 text-xs flex items-center gap-1.5 rounded-xl"
+                          >
+                            {isSavingChart ? 'Đang Lưu...' : '✓ Lưu Số Liệu Chuẩn'}
+                          </button>
+                        </div>
+                      </div>
                     ) : (
-                      <pre className="whitespace-pre-wrap text-[11px] bg-white p-2.5 rounded-xl border border-amber-200 font-mono">
-                        {essay.prompt.chartDataJson || 'Chưa có số liệu bóc tách cho đề này.'}
-                      </pre>
+                      /* Display View */
+                      <>
+                        <p className="text-[11px] text-slate-600 italic">
+                          Dưới đây là các số liệu và xu hướng được dùng làm căn cứ chuẩn để AI chấm tiêu chí <strong>Task Achievement (TA)</strong> cho bạn:
+                        </p>
+
+                        {parsedChartData ? (
+                          <div className="space-y-2.5">
+                            {parsedChartData.main_subject && (
+                              <div className="bg-white p-2.5 rounded-xl border border-amber-200/80 shadow-xs">
+                                <span className="font-extrabold text-[11px] text-amber-950 block mb-0.5">
+                                  🎯 Đối tượng đo lường & Mốc thời gian:
+                                </span>
+                                <span className="text-slate-800 font-medium text-xs">
+                                  {parsedChartData.main_subject}
+                                </span>
+                              </div>
+                            )}
+
+                            {parsedChartData.key_trends && Array.isArray(parsedChartData.key_trends) && (
+                              <div className="bg-white p-2.5 rounded-xl border border-amber-200/80 shadow-xs">
+                                <span className="font-extrabold text-[11px] text-amber-950 block mb-1">
+                                  📈 Xu hướng lớn (Overall Trends):
+                                </span>
+                                <ul className="list-disc pl-4 space-y-1 text-slate-700 font-medium text-xs">
+                                  {parsedChartData.key_trends.map((trend: string, idx: number) => (
+                                    <li key={idx}>{trend}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {parsedChartData.significant_data_points && Array.isArray(parsedChartData.significant_data_points) && (
+                              <div className="bg-white p-2.5 rounded-xl border border-amber-200/80 shadow-xs">
+                                <span className="font-extrabold text-[11px] text-amber-950 block mb-1">
+                                  🔢 Các mốc số liệu nổi bật (Key Figures):
+                                </span>
+                                <ul className="list-disc pl-4 space-y-1 text-slate-700 font-medium text-xs">
+                                  {parsedChartData.significant_data_points.map((pt: string, idx: number) => (
+                                    <li key={idx}>{pt}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+
+                            {parsedChartData.overview_summary && (
+                              <div className="bg-emerald-50/90 p-2.5 rounded-xl border border-emerald-200 shadow-xs">
+                                <span className="font-extrabold text-[11px] text-emerald-900 block mb-0.5">
+                                  💡 Tóm tắt tổng quan chuẩn (Standard Overview):
+                                </span>
+                                <span className="text-slate-800 font-medium text-xs">
+                                  {parsedChartData.overview_summary}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <pre className="whitespace-pre-wrap text-[11px] bg-white p-2.5 rounded-xl border border-amber-200 font-mono">
+                            {essay.prompt.chartDataJson || 'Chưa có số liệu bóc tách cho đề này.'}
+                          </pre>
+                        )}
+                      </>
                     )}
                   </div>
                 )}

@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Delete,
   Body,
   Param,
@@ -91,6 +92,14 @@ export class PromptsController {
       imageUrl,
       chartDataJson,
     });
+  }
+
+  @Put(':id/chart-data')
+  async updateChartData(
+    @Param('id') id: string,
+    @Body() body: { chartDataJson: string },
+  ) {
+    return this.promptsService.updateChartData(id, body.chartDataJson);
   }
 
   @Delete(':id')
